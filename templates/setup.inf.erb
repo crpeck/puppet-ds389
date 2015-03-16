@@ -1,0 +1,70 @@
+[General]
+<% if @fullmachinename != '' -%>
+FullMachineName=         <%= @fullmachinename %>
+<% end -%>
+<% if @suite_spot_userid != '' -%>
+SuiteSpotUserID=         <%= @suite_spot_userid %>
+<% end -%>
+<% if @suite_spot_group != '' -%>
+SuiteSpotGroup=          <%= @suite_spot_group %>
+<% end -%>
+<% if @configdirectoryldapurl != '' -%>
+ConfigDirectoryLdapURL=  <%= @configdirectoryldapurl %>
+<% end -%>
+<% if @admindomain != '' -%>
+AdminDomain=             <%= @admindomain %>
+<% end -%>
+<% if @configdirectoryadminid != '' -%>
+ConfigDirectoryAdminID=  <%= @configdirectoryadminid %>
+<% end -%>
+ConfigDirectoryAdminPwd= <%= @configdirectoryadminpwd %>
+<% if @cacertificate != '' -%>
+CACertificate=           <%= @cacertificate %>
+<% end -%>
+
+[slapd] 
+<% if @serverport != '' -%>
+ServerPort=              <%= @serverport %>
+<% end -%>
+<% if @serveridentifier != '' -%>
+ServerIdentifier=        <%= @serveridentifier %>
+<% end -%>
+<% if @suffix != '' -%>
+Suffix=                  <%= @suffix %>
+<% end -%>
+<% if @rootdn != '' -%>
+RootDN=                  <%= @rootdn %>
+<% end -%>
+RootDNPwd=               <%= @rootdnpwd %>
+<% if @installldiffile != '' -%>
+InstallLdifFile=         <%= @installldiffile %>
+<% end -%>
+<% if @schemafile != '' -%>
+SchemaFile=              <%= @dirsrv_dir -%>/<%= @schemafile %>
+<% end -%>
+<% if @configfile != '' -%>
+ConfigFile=              <%= @configfile %>
+<% end -%>
+<% if @slapdconfigformc != '' -%>
+SlapdConfigforMC=        <%= @slapdconfigformc %>
+<% end -%>
+<% if @useexistingmc != '' -%>
+UseExistingMC=           <%= @useexistingmc %>
+<% end -%>
+
+[admin] 
+<% if @sysuser != '' -%>
+SysUser=                 <%= @sysuser %>
+<% end -%>
+<% if @port != '' -%>
+Port=                    <%= @port %>
+<% end -%>
+<% if @serveradminid != '' -%>
+ServerAdminID=           <%= @serveradminid %>
+<% end -%>
+<% if @serveradminpwd != '' -%>
+ServerAdminPwd=          <%= @serveradminpwd %>
+<% end -%>
+<% if @serveripaddress != '' -%>
+ServerIpAddress=         <%= @serveripaddress %>
+<% end -%>

@@ -1,0 +1,226 @@
+#!/bin/sh
+# -*- Mode: Python -*-
+# vi:si:et:sw=4:sts=4:ts=4
+
+### BEGIN INIT INFO
+# Provides:          dirsrv-admin
+# Required-Start:    $remote_fs dirsrv
+# Required-Stop:     $remote_fs
+# Should-Start:      $network
+# Should-Stop:       $network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start and stop 389 Directory Admin Server
+# Description:       dirsrv is the Admin server for 389 LDAP Directory
+### END INIT INFO
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+test -f /etc/default/dirsrv-admin && . /etc/default/dirsrv-admin
+
+. /lib/lsb/init-functions
+
+DISTRO=$(lsb_release -is 2>/dev/null || echo Debian)
+CONFIG_DIR="/etc/dirsrv"
+BASEEXEC="start-ds-admin"
+EXEC="/usr/sbin/$BASEEXEC"
+PROG="ds-admin"
+PIDDIR="/var/run/dirsrv-admin"
+ADMCONF="$CONFIG_DIR/admin-serv/adm.conf"
+
+check_network() {
+    if [ -z "$(/sbin/ifconfig)" ]; then
+        log_action_msg "No networks configured."
+        return 1 
+    fi
+    return 0
+}
+
+
+# On Solaris /var/run is in tmpfs and gets wiped out upon reboot
+# we have to recreate the /var/run/dirsrv-admin directory
+# We also have to make sure that the directory is writable
+# by the directory server process
+# the argument to this function is the server instance directory,
+# which must have a dse.ldif file in it
+fix_pid_dir_ownership()
+{
+    if [ -d $piddir ] ; then
+        owner=`grep \^sysuser "$ADMCONF" | awk '{print $2}'`
+        dirowner=`ls -ld $piddir | awk '{print $3}'`
+        dirgrp=`ls -ld $piddir | awk '{print $4}'`
+        if [ "$owner" != "$dirowner" ]; then
+            groups $owner | grep $dirgrp > /dev/null 2>&1
+            rc=$?
+            if [ $rc -eq 0 ]; then
+                chmod 770 $piddir
+            else
+                log_failure_msg "$piddir is not writable for $owner"
+                exit 1
+            fi
+        fi
+    else
+        mkdir -p $piddir
+        owner=`grep \^nsslapd-localuser $1/dse.ldif | awk '{print $2}'`
+        if [ -n "$owner" ] ; then
+            chown $owner $piddir
+            chmod 700 $piddir
+        fi
+    fi
+}
+
+start_script=/usr/sbin/start-ds-admin
+restart_script=/usr/sbin/restart-ds-admin
+stop_script=/usr/sbin/stop-ds-admin
+exec=`grep "^HTTPD=" $start_script | awk -F= '{print $2}'`
+prog="dirsrv-admin"
+# PID directory
+piddir="/var/run/dirsrv"
+# PID file
+pidfile=$piddir/admin-serv.pid
+
+[ -f $exec ] || exit 0
+
+if [ ! -f "$ADMCONF" ]; then
+    log_action_msg "No $ADMCONF file is present"
+    # Quit without failing since the server is not configured yet
+    exit 0 
+fi
+
+
+umask 077
+
+# since we use the start script to start admin, we source the
+# init config file there, not here
+# if we ever get rid of the start script, we'll have to uncomment
+# the following line
+#[ -f /etc/default/dirsrv-admin ] && . /etc/default/dirsrv-admin
+
+start() {
+    if [ ! -f $start_script ]; then
+        log_failure_msg "*** Error: $start_script does not exist"
+        exit 1
+    fi
+    echo  "Starting $prog: "
+
+    # the server creates pidfile and writes the pid to it when it is fully
+    # started and available to serve clients
+    server_running=0
+    if [ -f $pidfile ]; then
+        pid=`cat $pidfile`
+        if kill -0 $pid > /dev/null 2>&1 ; then
+            log_success_msg " already running"
+            server_running=1
+        else
+            log_warning_msg " not running, but pid file exists - attempt to start anyway..."
+            rm -f $pidfile
+        fi
+    fi
+    server_started=0
+    if [ $server_running -eq 0 ] ; then
+        rm -f $pidfile
+        fix_pid_dir_ownership 
+        $start_script
+        if [ $? -eq 0 ]; then
+            server_started=1 # well, perhaps not running, but started ok
+        else
+            failure; echo
+        fi
+    fi
+    if [ $server_started -eq 1 ] ; then
+        loop_counter=1
+		# wait for 10 minutes (600 times 1 seconds)
+        max_count=600
+        while test $loop_counter -le $max_count ; do
+            loop_counter=`expr $loop_counter + 1`
+            if test ! -f $pidfile ; then
+                sleep 1
+            else
+                pid=`cat $pidfile`
+                break
+            fi
+        done
+        if kill -0 $pid > /dev/null 2>&1 && test -f $pidfile ; then
+            log_success_msg " success"
+        else
+            log_failure_msg "*** Error: $prog failed to start"
+        fi
+    fi
+}
+
+stop() {
+    if [ ! -f $stop_script ]; then
+       log_failure_msg "$stop_script does not exist"
+       exit 1
+    fi
+    echo "Shutting down $prog: "
+    if [ -f $pidfile ]; then
+        pid=`cat $pidfile`
+        server_stopped=0
+        if kill -0 $pid > /dev/null 2>&1 ; then
+            kill $pid
+            if [ $? -eq 0 ]; then
+                server_stopped=1
+            else
+                failure; echo
+            fi
+        fi
+        if [ $server_stopped -eq 1 ] ; then
+            loop_counter=1
+			# wait for 10 minutes (600 times 1 second)
+            max_count=600
+            while test $loop_counter -le $max_count; do
+                loop_counter=`expr $loop_counter + 1`
+                if kill -0 $pid > /dev/null 2>&1 ; then
+                    sleep 1
+                else
+                    if test -f $pidfile ; then
+                        rm -f $pidfile
+                    fi
+                    break
+                fi
+            done
+            if test -f $pidfile ; then
+                log_failure_msg "*** Error: $prog failed to stop"
+            else
+                log_success_msg " success"
+                rm -f $pidfile
+            fi
+        fi
+    fi
+}
+
+restart() {
+    stop
+    start
+}
+
+
+status() {
+    if [ -f $pidfile ]; then
+        pid=`cat $pidfile`
+        if kill -0 $pid > /dev/null 2>&1 ; then
+            log_daemon_msg "$prog (pid $pid) is running..." "dirsrv-admin"
+            ret=0
+        else
+            log_daemon_msg "$prog dead but pid file exists" "dirsrv-admin"
+            ret=1
+        fi
+    else
+        echo "$prog is stopped"
+        ret=1
+    fi
+    exit $ret
+}
+
+case "$1" in
+    start|stop|restart|reload|status|force-reload)
+        $1
+        ;;
+    condrestart)
+        [ ! -f $lockfile ] || restart
+        ;;
+    *)
+        echo Unknown command $1
+        echo "Usage: $0 {start|stop|status|restart|condrestart}"
+        exit 2
+esac

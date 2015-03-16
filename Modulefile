@@ -1,0 +1,10 @@
+name    'ds389'
+version '0.1.0'
+source 'https://github.com/crpeck/puppet-ds389.git'
+author 'Chris Peck <crpeck@wm.edu>'
+license 'Apache License, Version 2.0'
+summary 'installs and configuires the 389 directory server'
+description 'Manages Fedora 389 Directory Server'
+project_page 'https://github.com/crpeck/puppet-ds389'
+
+dependency 'puppetlabs/stdlib', '>= 4.0.0'
