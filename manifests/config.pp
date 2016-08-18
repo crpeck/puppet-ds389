@@ -68,8 +68,37 @@ class ds389::config {
     content => template('ds389/setup.inf.erb'),
     owner   => 'root',
     group   => 'root',
-    mode    => '0664',
+    mode    => '0660',
   }
+
+  file { "${ds389::dirsrv_dir}/replication-manager.ldif":
+    content => template('ds389/replication-manager.ldif.erb'),
+    owner   => 'root',
+    group   => 'root',
+    mode    => '0660',
+  }
+
+  file { "${ds389::dirsrv_dir}/setup-consumer-replication.ldif":
+    content => template('ds389/setup-consumer-replication.ldif.erb'),
+    owner   => 'root',
+    group   => 'root',
+    mode    => '0660',
+  }
+
+  file { "${ds389::dirsrv_dir}/setup-supplier-replication-changelog.ldif.ldif":
+    content => template('ds389/setup-supplier-replication-changelog.ldif.erb'),
+    owner   => 'root',
+    group   => 'root',
+    mode    => '0660',
+  }
+
+  file { "${ds389::dirsrv_dir}/setup-supplier-replication.ldif":
+    content => template('ds389/setup-supplier-replication.ldif.erb'),
+    owner   => 'root',
+    group   => 'root',
+    mode    => '0660',
+  }
+
 
   exec { 'create_dirsrv':
     command => "${ds389::setup_cmd} -s -f ${ds389::dirsrv_dir}/setup.inf",
